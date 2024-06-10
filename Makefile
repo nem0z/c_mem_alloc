@@ -1,20 +1,19 @@
-CC = gcc
+SRC	=	*.c
 
-CFLAGS = -Wall
+CFLAGS	=	-Iinclude -W -Wall -Wextra
 
-TARGET = main
+OBJ	=	$(SRC:.c=.o)
 
-SRCS = *.c
+NAME	=	mem.o
 
-OBJS = $(SRCS:.c=.o)
-
-all: $(TARGET)
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+all:
+	gcc *.c -o $(NAME) $(CFLAGS)
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJ)
+	rm -f *.o
+
+fclean:	clean
+	rm -f $(NAME)
+
+re:	fclean all
