@@ -11,6 +11,9 @@
 
 #define BLOCK_SIZE_UNIT 32
 
+static void * heap_head = NULL;
+static void * heap_tail = NULL;
+
 typedef struct mem_block_metadata_t {
     void * prev;
     size_t size;
