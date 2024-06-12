@@ -5,15 +5,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <assert.h>
-
-#define EXIT_FAILURE 1
+#include <stdlib.h>
 
 #define METADATA_SIZE sizeof(mem_block_metadata)
 
 #define BLOCK_SIZE_UNIT 32
-
-static void * heap_head = NULL;
-static void * heap_tail = NULL;
 
 typedef struct mem_block_metadata_t {
     void * prev;
