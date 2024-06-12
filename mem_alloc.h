@@ -42,6 +42,7 @@ mem_block_metadata * new_blk(size_t size);
 mem_block_metadata * get_blk(void * ptr);
 size_t get_block_size(size_t size);
 mem_block_metadata * get_next_blk(mem_block_metadata * blk);
+mem_block_metadata * find_free_blk(size_t size);
 
 
 #endif // MEM_ALLOC_H

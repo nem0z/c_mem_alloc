@@ -23,8 +23,8 @@ int main() {
     
     dump_heap();
 
-    printf("Free ptr4\n");
     mem_free(ptr4);
+    printf("Free ptr4\n");
 
     dump_heap();
 

@@ -5,9 +5,13 @@ void * mem_alloc(size_t size) {
         heap_head = get_break();
     }
 
-    void * ptr = new_blk(size);
+    mem_block_metadata * blk = find_free_blk(size);
+    if(blk != NULL) {
+        blk->free = false;
+        return blk+1;
+    }
 
-    return ptr;
+    return new_blk(size)+1;
 }
 
 void mem_free(void * ptr) {
@@ -21,6 +25,15 @@ void mem_free(void * ptr) {
         heap_tail = trunc_heap(blk->prev);
         printf("Truncated heap\n");
     }
+}
+
+mem_block_metadata * find_free_blk(size_t size) {
+    mem_block_metadata * blk;
+    for(blk = heap_head; blk <= heap_tail; blk = get_next_blk(blk)) {
+        if(blk->free && blk->size >= size) return blk;
+    }
+
+    return NULL;
 }
 
 void * get_break() {
@@ -51,7 +64,12 @@ mem_block_metadata * new_blk(size_t size) {
     metadata->prev = heap_tail;
     heap_tail = metadata;
 
-    return sbrk(blk_size);
+    if(sbrk(blk_size) == (void *)-1) {
+        perror("sbrk call error");
+        exit(EXIT_FAILURE);
+    }
+
+    return metadata;
 }
 
 mem_block_metadata * get_blk(void * ptr) {
