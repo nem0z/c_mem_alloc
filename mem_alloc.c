@@ -1,30 +1,58 @@
 #include "mem_alloc.h"
+#include <string.h>
+
+static void * heap_head = NULL;
+static void * heap_tail = NULL;
 
 void * mem_alloc(size_t size) {
     if(heap_head == NULL) {
         heap_head = get_break();
     }
 
-    mem_block_metadata * blk = find_free_blk(size);
-    if(blk != NULL) {
-        blk->free = false;
-        return blk+1;
+    size_t blk_size = get_next_pow2(size);
+    mem_block_metadata * blk = find_free_blk(blk_size);
+    if(blk == NULL) return new_blk(size)+1;
+        
+    blk->free = false;
+    blk->used = size;
+
+    if(blk->size >= size + BLOCK_MIN_SIZE) {
+        split_blk(blk, blk_size);
     }
 
-    return new_blk(size)+1;
+    return blk+1;
 }
 
 void mem_free(void * ptr) {
     mem_block_metadata * blk = get_blk(ptr);
     blk->free = true;
+    blk->used = 0;
 
     blk = merge_left(blk);
     merge_right(blk);
 
     if(blk == heap_tail) {
-        heap_tail = trunc_heap(blk->prev);
+        heap_tail = ((mem_block_metadata *)trunc_heap(blk))->prev;
         printf("Truncated heap\n");
     }
+}
+
+void * mem_realloc(void * ptr, size_t new_size) {
+    mem_block_metadata * blk = get_blk(ptr);
+    if(blk->size >= new_size) return ptr;
+
+    void * new_ptr = mem_alloc(new_size);
+    mem_free(ptr);
+
+    return new_ptr;
+}
+
+void * mem_calloc(size_t mb_count, size_t mb_size) {
+    size_t size = mb_count * mb_size;
+    void * ptr = mem_alloc(size);
+
+    memset(&ptr, 0, mb_size);
+    return ptr;
 }
 
 mem_block_metadata * find_free_blk(size_t size) {
@@ -56,10 +84,11 @@ void * trunc_heap(mem_block_metadata * blk) {
 }
 
 mem_block_metadata * new_blk(size_t size) {
-    size_t blk_size = get_block_size(size);
+    size_t blk_size = get_next_pow2(size);
     mem_block_metadata * metadata = sbrk(METADATA_SIZE);
 
     metadata->size = blk_size;
+    metadata->used = size;
     metadata->free = false;
     metadata->prev = heap_tail;
     heap_tail = metadata;
@@ -76,9 +105,14 @@ mem_block_metadata * get_blk(void * ptr) {
     return ptr - (METADATA_SIZE / sizeof(*ptr));
 }
 
-size_t get_block_size(size_t size) {
-    size_t delta = BLOCK_SIZE_UNIT - (size % BLOCK_SIZE_UNIT);
-    return size + (delta ? delta : BLOCK_SIZE_UNIT);
+size_t get_next_pow2(size_t n) {
+  n = n - 1;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n + 1;
 }
 
 mem_block_metadata * get_next_blk(mem_block_metadata * blk) {
@@ -110,6 +144,20 @@ void merge_right(mem_block_metadata * blk) {
     if(next_next_blk == heap_tail) heap_tail = blk;
 }
 
+void split_blk(mem_block_metadata * blk, size_t blk_size) {
+    size_t prev_size = blk->size;
+    blk->size = blk_size;
+
+    mem_block_metadata * next = get_next_blk(blk);
+    next->size = prev_size - blk_size;
+    next->used = 0;
+    next->free = true;
+    next->prev = blk;
+
+    mem_block_metadata * next_next = get_next_blk(next);
+    next_next->prev = next;
+}
+
 void dump_ptr(void * ptr) {
     mem_block_metadata * blk = get_blk(ptr);
     dump_blk(blk);
@@ -120,6 +168,7 @@ void dump_blk(mem_block_metadata * blk) {
     printf("Addr: %p\n", blk);
     printf("Prev: %p\n", blk->prev);
     printf("Size: %lu\n", blk->size);
+    printf("Used: %lu\n", blk->used);
     printf("Free: %s\n", blk->free ? "true" : "false");
     printf("Data addr: %p\n", blk+1);
     printf("===== -*- =====\n");
