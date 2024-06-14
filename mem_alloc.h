@@ -31,6 +31,8 @@ void dump_blk(mem_block_metadata * blk);
 void dump_heap();
 
 // brk / srbk wrapper
+void * wsbrk(intptr_t Increment);
+void * wbrk(char *EndDataSegment);
 void * get_break();
 void * trunc_heap(mem_block_metadata * blk);
 
@@ -39,6 +41,7 @@ mem_block_metadata * merge_left(mem_block_metadata * blk);
 void merge_right(mem_block_metadata * blk);
 
 // block splits
+void split_blk(mem_block_metadata * blk, size_t blk_size);
 
 // block utils
 mem_block_metadata * new_blk(size_t size);

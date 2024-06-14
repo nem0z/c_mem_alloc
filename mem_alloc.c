@@ -4,6 +4,23 @@
 static void * heap_head = NULL;
 static void * heap_tail = NULL;
 
+void * wsbrk(intptr_t increment) {
+    void * prev_addr = sbrk(increment);
+    if(prev_addr == (void *)(-1)) {
+        perror("call sbrk error: ");
+        exit(EXIT_FAILURE);
+    }
+
+    return prev_addr;
+}
+
+void wbrk(char * addr) {
+    if(brk(addr) == (void *)(-1)) {
+        perror("call brk error: ");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void * mem_alloc(size_t size) {
     if(heap_head == NULL) {
         heap_head = get_break();
@@ -57,7 +74,7 @@ void * mem_calloc(size_t mb_count, size_t mb_size) {
 
 mem_block_metadata * find_free_blk(size_t size) {
     mem_block_metadata * blk;
-    for(blk = heap_head; blk <= heap_tail; blk = get_next_blk(blk)) {
+    for(blk = heap_head; (void *)heap_tail > (void *)blk; blk = get_next_blk(blk)) {
         if(blk->free && blk->size >= size) return blk;
     }
 
@@ -65,27 +82,17 @@ mem_block_metadata * find_free_blk(size_t size) {
 }
 
 void * get_break() {
-    void * current_break = sbrk(0);
-    if(current_break == (void *)-1) {
-        perror("sbrk call error");
-        exit(EXIT_FAILURE);
-    }
-
-    return current_break;
+    return wsbrk(0);
 }
 
 void * trunc_heap(mem_block_metadata * blk) {
-    if(brk(blk) == 0) return blk;
-
-    perror("sbrk call error");
-    exit(EXIT_FAILURE);
-
+    wbrk(blk);
     return get_break();
 }
 
 mem_block_metadata * new_blk(size_t size) {
     size_t blk_size = get_next_pow2(size);
-    mem_block_metadata * metadata = sbrk(METADATA_SIZE);
+    mem_block_metadata * metadata = wsbrk(METADATA_SIZE);
 
     metadata->size = blk_size;
     metadata->used = size;
@@ -93,11 +100,7 @@ mem_block_metadata * new_blk(size_t size) {
     metadata->prev = heap_tail;
     heap_tail = metadata;
 
-    if(sbrk(blk_size) == (void *)-1) {
-        perror("sbrk call error");
-        exit(EXIT_FAILURE);
-    }
-
+    wsbrk(blk_size)
     return metadata;
 }
 
@@ -176,7 +179,7 @@ void dump_blk(mem_block_metadata * blk) {
 
 void dump_heap() {
     mem_block_metadata * blk;
-    for(blk = heap_head; blk <= heap_tail; blk = get_next_blk(blk)) {
+    for(blk = heap_head; (void *)heap_tail > (void *)blk ; blk = get_next_blk(blk)) {
         dump_blk(blk);
     }
 }
